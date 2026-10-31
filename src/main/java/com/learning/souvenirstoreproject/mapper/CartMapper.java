@@ -17,6 +17,7 @@ public interface CartMapper {
     @Mapping(target = "totalPrice", expression = "java(calculateTotalPrice(cart))")
     CartResponse toCartResponse(Cart cart);
 
+    @Mapping(target = "itemId", source = "id")
     @Mapping(target = "productVariantId", source = "productVariant.id")
     @Mapping(target = "productId", source = "productVariant.product.id")
     @Mapping(target = "productName", source = "productVariant.product.name")

@@ -40,7 +40,7 @@ public class Payment {
     @Enumerated(EnumType.STRING)
     @Column(length = 20, nullable = false)
     @Builder.Default
-    PaymentStatus paymentStatus = PaymentStatus.PENDING;
+    PaymentStatus status = PaymentStatus.PENDING;
 
     @Column(name = "paid_at")
     LocalDateTime paidAt;

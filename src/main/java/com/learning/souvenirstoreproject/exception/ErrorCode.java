@@ -22,11 +22,6 @@ public enum ErrorCode {
     USER_ALREADY_ACTIVE(1009, HttpStatus.CONFLICT, "User is already active"),
     USER_ALREADY_BLOCKED(1010, HttpStatus.CONFLICT, "User is already blocked"),
     ROLE_NOT_FOUND(1011, HttpStatus.NOT_FOUND, "Role not found"),
-    PERMISSION_NOT_FOUND(1012, HttpStatus.NOT_FOUND, "Permission not found"),
-    PERMISSION_ALREADY_EXISTS(1013, HttpStatus.CONFLICT, "Permission already exists"),
-    PERMISSION_IN_USE(1014, HttpStatus.CONFLICT, "Permission is assigned to roles, cannot delete"),
-    PERMISSION_ALREADY_ASSIGNED(1015, HttpStatus.CONFLICT, "Permission is already assigned to this role"),
-    PERMISSION_NOT_IN_ROLE(1016, HttpStatus.CONFLICT, "Permission is not in this role"),
 
 
     CATEGORY_NOT_FOUND(2001, HttpStatus.NOT_FOUND, "Category not found"),
@@ -70,6 +65,7 @@ public enum ErrorCode {
     ORDER_CANNOT_BE_CANCELLED(6003, HttpStatus.CONFLICT, "Order cannot be cancelled"),
     ORDER_ALREADY_CANCELLED(6004, HttpStatus.CONFLICT, "Order is already cancelled"),
     ORDER_NOT_OWNED(6005, HttpStatus.FORBIDDEN, "Order does not belong to you"),
+    ORDER_ALREADY_IN_STATUS(6006, HttpStatus.CONFLICT, "Order is already in this status"),
 
 
     PAYMENT_NOT_FOUND(7001, HttpStatus.NOT_FOUND, "Payment not found"),

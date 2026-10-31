@@ -4,9 +4,6 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
-import java.util.HashSet;
-import java.util.Set;
-
 @Entity
 @Table(name = "roles")
 @Getter
@@ -21,13 +18,4 @@ public class Role {
     String name;
 
     String description;
-
-    @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(
-            name = "role_permissions",
-            joinColumns = @JoinColumn(name = "role_name"),
-            inverseJoinColumns = @JoinColumn(name = "permission_name")
-    )
-    @Builder.Default
-    Set<Permission> permissions = new HashSet<>();
 }

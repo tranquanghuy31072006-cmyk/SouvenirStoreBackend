@@ -4,6 +4,7 @@ import com.learning.souvenirstoreproject.dto.request.OrderCreationRequest;
 import com.learning.souvenirstoreproject.dto.response.OrderResponse;
 import com.learning.souvenirstoreproject.entity.*;
 import com.learning.souvenirstoreproject.enums.OrderStatus;
+import com.learning.souvenirstoreproject.enums.PaymentMethod;
 import com.learning.souvenirstoreproject.enums.PaymentStatus;
 import com.learning.souvenirstoreproject.enums.ProductVariantStatus;
 import com.learning.souvenirstoreproject.exception.AppException;
@@ -14,12 +15,14 @@ import com.learning.souvenirstoreproject.repository.*;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -107,7 +110,7 @@ public class OrderService {
                 .paymentMethod(orderCreationRequest.getPaymentMethod())
                 .transactionCode(UUID.randomUUID().toString())
                 .amount(order.getFinalAmount())
-                .paymentStatus(PaymentStatus.PENDING)
+                .status(PaymentStatus.PENDING)
                 .build();
 
         paymentRepository.save(payment);
@@ -174,12 +177,100 @@ public class OrderService {
         Payment payment = paymentRepository.findByOrderId(order.getId()).orElse(null);
 
         if (payment != null)
-            payment.setPaymentStatus(newPaymentStatus);
+            payment.setStatus(newPaymentStatus);
 
         OrderResponse response = orderMapper.toOrderResponse(order);
 
         if (payment != null)
             response.setPayment(paymentMapper.toPaymentResponse(payment));
+
+        return response;
+    }
+
+    @Transactional
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    public OrderResponse confirmOrder(Long orderId) {
+        Order order = orderRepository.findById(orderId).orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
+
+        if (order.getOrderStatus() == OrderStatus.CANCELLED)
+            throw new AppException(ErrorCode.INVALID_ORDER_STATUS);
+        if (order.getOrderStatus() == OrderStatus.CONFIRMED)
+            throw new AppException(ErrorCode.ORDER_ALREADY_IN_STATUS);
+        if (order.getOrderStatus() != OrderStatus.PENDING)
+            throw new AppException(ErrorCode.INVALID_ORDER_STATUS);
+
+        order.setOrderStatus(OrderStatus.CONFIRMED);
+
+        orderRepository.save(order);
+
+        return orderMapper.toOrderResponse(order);
+    }
+
+    @Transactional
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    public OrderResponse shipOrder(Long orderId) {
+        Order order = orderRepository.findById(orderId).orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
+
+        if (order.getOrderStatus() == OrderStatus.CANCELLED)
+            throw new AppException(ErrorCode.INVALID_ORDER_STATUS);
+        if (order.getOrderStatus() == OrderStatus.SHIPPING)
+            throw new AppException(ErrorCode.ORDER_ALREADY_IN_STATUS);
+        if (order.getOrderStatus() != OrderStatus.CONFIRMED)
+            throw new AppException(ErrorCode.INVALID_ORDER_STATUS);
+
+        order.setOrderStatus(OrderStatus.SHIPPING);
+
+        orderRepository.save(order);
+
+        return orderMapper.toOrderResponse(order);
+    }
+
+    @Transactional
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    public OrderResponse completeOrder(Long orderId) {
+        Order order = orderRepository.findById(orderId).orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
+
+        if (order.getOrderStatus() == OrderStatus.CANCELLED)
+            throw new AppException(ErrorCode.INVALID_ORDER_STATUS);
+        if (order.getOrderStatus() == OrderStatus.COMPLETED)
+            throw new AppException(ErrorCode.ORDER_ALREADY_IN_STATUS);
+        if (order.getOrderStatus() != OrderStatus.SHIPPING)
+            throw new AppException(ErrorCode.INVALID_ORDER_STATUS);
+
+        order.setOrderStatus(OrderStatus.COMPLETED);
+
+        Payment payment = paymentRepository.findByOrderId(order.getId()).orElseThrow(() -> new AppException(ErrorCode.PAYMENT_NOT_FOUND));
+
+        if (payment.getPaymentMethod() == PaymentMethod.COD || payment.getStatus() == PaymentStatus.PENDING) {
+            payment.setStatus(PaymentStatus.PAID);
+            payment.setPaidAt(LocalDateTime.now());
+            order.setPaymentStatus(PaymentStatus.PAID);
+
+            paymentRepository.save(payment);
+        }
+
+        orderRepository.save(order);
+
+        return orderMapper.toOrderResponse(order);
+    }
+
+    @Transactional(readOnly = true)
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    public List<OrderResponse> getAllOrdersForManage() {
+        return orderRepository.findAllByOrderByCreatedAtDesc().stream()
+                .map(orderMapper::toOrderResponse).toList();
+    }
+
+    @Transactional(readOnly = true)
+    @PreAuthorize("hasAnyRole('ADMIN','STAFF')")
+    public OrderResponse getOrderByIdForManage(Long orderId) {
+        Order order = orderRepository.findById(orderId).orElseThrow(()
+                -> new AppException(ErrorCode.ORDER_NOT_FOUND));
+
+        OrderResponse response = orderMapper.toOrderResponse(order);
+
+        paymentRepository.findByOrderId(order.getId()).
+                ifPresent(payment -> response.setPayment(paymentMapper.toPaymentResponse(payment)));
 
         return response;
     }

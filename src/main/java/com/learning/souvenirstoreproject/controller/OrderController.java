@@ -53,4 +53,39 @@ public class OrderController {
                 .result(orderService.cancelOrder(orderId))
                 .build();
     }
+
+    @PatchMapping("/{orderId}/confirm")
+    public ApiResponse<OrderResponse> confirmOrder(@PathVariable Long orderId) {
+        return ApiResponse.<OrderResponse>builder()
+                .result(orderService.confirmOrder(orderId))
+                .build();
+    }
+
+    @PatchMapping("/{orderId}/ship")
+    public ApiResponse<OrderResponse> shipOrder(@PathVariable Long orderId) {
+        return ApiResponse.<OrderResponse>builder()
+                .result(orderService.shipOrder(orderId))
+                .build();
+    }
+
+    @PatchMapping("/{orderId}/complete")
+    public ApiResponse<OrderResponse> completeOrder(@PathVariable Long orderId) {
+        return ApiResponse.<OrderResponse>builder()
+                .result(orderService.completeOrder(orderId))
+                .build();
+    }
+
+    @GetMapping("/manage")
+    public ApiResponse<List<OrderResponse>> getAllOrdersForManage() {
+        return ApiResponse.<List<OrderResponse>>builder()
+                .result(orderService.getAllOrdersForManage())
+                .build();
+    }
+
+    @GetMapping("/manage/{orderId}")
+    public ApiResponse<OrderResponse> getOrderByIdForManage(@PathVariable Long orderId) {
+        return ApiResponse.<OrderResponse>builder()
+                .result(orderService.getOrderByIdForManage(orderId))
+                .build();
+    }
 }
