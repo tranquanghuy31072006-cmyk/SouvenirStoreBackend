@@ -40,7 +40,8 @@ public class UserService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        User user = userRepository.findByUsername(username).orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        User user = userRepository.findByUsername(username).orElseThrow(()
+                -> new UsernameNotFoundException("User not found"));
 
         return org.springframework.security.core.userdetails.User
                 .withUsername(user.getUsername())
@@ -77,7 +78,6 @@ public class UserService implements UserDetailsService {
 
         return userMapper.toUserResponse(user);
     }
-
 
     @PreAuthorize("hasRole('ADMIN')")
     public UserResponse getUserById(Long id) {

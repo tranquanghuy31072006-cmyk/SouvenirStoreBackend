@@ -74,8 +74,9 @@ public enum ErrorCode {
 
 
     REVIEW_NOT_FOUND(8001, HttpStatus.NOT_FOUND, "Review not found"),
-    REVIEW_NOT_PURCHASED(8002, HttpStatus.FORBIDDEN, "You must purchase this product before reviewing"),
+    REVIEW_NOT_PURCHASED(8002, HttpStatus.FORBIDDEN, "You must purchase and receive this product to review"),
     REVIEW_ALREADY_EXISTS(8003, HttpStatus.CONFLICT, "You have already reviewed this product"),
+    REVIEW_NOT_OWNED(8004, HttpStatus.FORBIDDEN, "You are not permitted to change this review"),
 
 
     UNAUTHENTICATED(9001, HttpStatus.UNAUTHORIZED, "Unauthenticated"),

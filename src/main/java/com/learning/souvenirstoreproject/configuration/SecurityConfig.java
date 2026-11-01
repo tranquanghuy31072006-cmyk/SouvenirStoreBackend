@@ -39,10 +39,10 @@ public class SecurityConfig {
                                 "/auth/refresh",
                                 "/auth/logout"
                         ).permitAll()
-
                         .requestMatchers(HttpMethod.GET, "/products/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/products/*/variants/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/variants/**").permitAll()
+                        //.requestMatchers(HttpMethod.GET, "/products/*/reviews").permitAll()
                         .anyRequest().authenticated()
                 )
 

@@ -15,6 +15,8 @@ public class OrderItemResponse {
 
     Long orderId;
 
+    Long productId;
+
     Long productVariantId;
 
     String productName;
