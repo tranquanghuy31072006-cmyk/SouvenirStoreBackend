@@ -38,7 +38,7 @@ public class ApplicationInitConfig {
                     "STAFF",
                     "staff",
                     "staff@12345",
-                    "staff@souvenirstore12345",
+                    "staff@souvenirstore.com",
                     "Store Staff",
                     "0983868386"
             );

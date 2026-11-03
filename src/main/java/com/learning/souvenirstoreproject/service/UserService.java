@@ -137,8 +137,8 @@ public class UserService implements UserDetailsService {
     @PreAuthorize("hasRole('ADMIN')")
     public UserResponse activateUserStatus(Long id) {
         User user = userRepository.findById(id).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
-        if (user.getStatus() == UserStatus.BLOCKED) {
-            throw new AppException(ErrorCode.USER_BLOCKED);
+        if (user.getStatus() == UserStatus.ACTIVE) {
+            throw new AppException(ErrorCode.USER_ALREADY_ACTIVE);
         }
         user.setStatus(UserStatus.ACTIVE);
 
@@ -148,8 +148,8 @@ public class UserService implements UserDetailsService {
     @PreAuthorize("hasRole('ADMIN')")
     public UserResponse deactivateUserStatus(Long id) {
         User user = userRepository.findById(id).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
-        if (user.getStatus() == UserStatus.ACTIVE)
-            throw new AppException(ErrorCode.USER_ALREADY_ACTIVE);
+        if (user.getStatus() == UserStatus.BLOCKED)
+            throw new AppException(ErrorCode.USER_ALREADY_BLOCKED);
 
         user.setStatus(UserStatus.BLOCKED);
 

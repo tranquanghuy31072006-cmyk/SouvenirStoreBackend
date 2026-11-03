@@ -23,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -35,6 +36,7 @@ public class OrderService {
     PaymentRepository paymentRepository;
     CartRepository cartRepository;
     UserRepository userRepository;
+    ProductVariantRepository productVariantRepository;
     OrderMapper orderMapper;
     PaymentMapper paymentMapper;
 
@@ -42,24 +44,50 @@ public class OrderService {
     static final BigDecimal ZERO = BigDecimal.ZERO;
 
     @Transactional
-    public OrderResponse createOrder(OrderCreationRequest orderCreationRequest) {
-
+    public OrderResponse createOrder(OrderCreationRequest request) {
         User user = getCurrentUser();
+        Cart cart = cartRepository.findByUserId(user.getId()).orElse(null);
 
-        Cart cart = cartRepository.findByUserId(user.getId()).orElseThrow(()
-                -> new AppException(ErrorCode.CART_NOT_FOUND));
+        List<CartItem> itemsToCheckout = new ArrayList<>();
 
-        if (cart.getCartItems() == null || cart.getCartItems().isEmpty())
+        if (request.getBuyNowProductVariantId() != null) {
+            ProductVariant variant = productVariantRepository.findById(request.getBuyNowProductVariantId())
+                    .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_VARIANT_NOT_FOUND));
+
+            CartItem tempItem = CartItem.builder()
+                    .productVariant(variant)
+                    .quantity(request.getBuyNowQuantity())
+                    .price(variant.getSalePrice() != null ? variant.getSalePrice() : variant.getPrice())
+                    .build();
+            itemsToCheckout.add(tempItem);
+        }
+        else {
+            if (cart == null || cart.getCartItems() == null || cart.getCartItems().isEmpty())
+                throw new AppException(ErrorCode.CART_EMPTY);
+
+            if (request.getCartItemIds() != null && !request.getCartItemIds().isEmpty()) {
+                for (CartItem item : cart.getCartItems()) {
+                    if (request.getCartItemIds().contains(item.getId())) {
+                        itemsToCheckout.add(item);
+                    }
+                }
+            } else {
+                itemsToCheckout.addAll(cart.getCartItems());
+            }
+        }
+
+        if (itemsToCheckout.isEmpty()) {
             throw new AppException(ErrorCode.CART_EMPTY);
+        }
 
         Order order = Order.builder()
                 .user(user)
                 .orderCode("ORD-" + UUID.randomUUID())
-                .receiverName(orderCreationRequest.getReceiverName())
-                .receiverAddress(orderCreationRequest.getReceiverAddress())
-                .receiverPhone(orderCreationRequest.getReceiverPhone())
-                .note(orderCreationRequest.getNote())
-                .paymentMethod(orderCreationRequest.getPaymentMethod())
+                .receiverName(request.getReceiverName())
+                .receiverAddress(request.getReceiverAddress())
+                .receiverPhone(request.getReceiverPhone())
+                .note(request.getNote())
+                .paymentMethod(request.getPaymentMethod())
                 .paymentStatus(PaymentStatus.PENDING)
                 .orderStatus(OrderStatus.PENDING)
                 .shippingFee(SHIPPING_FEE)
@@ -68,19 +96,19 @@ public class OrderService {
 
         BigDecimal totalAmount = ZERO;
 
-        for (CartItem cartItem : cart.getCartItems()) {
-            ProductVariant variant = cartItem.getProductVariant();
+        for (CartItem item : itemsToCheckout) {
+            ProductVariant variant = item.getProductVariant();
 
-            if (variant.getStatus() != ProductVariantStatus.ACTIVE)
+            if (variant.getStatus() != ProductVariantStatus.ACTIVE) {
                 throw new AppException(ErrorCode.PRODUCT_VARIANT_INACTIVE);
+            }
 
             int stock = variant.getStockQuantity() == null ? 0 : variant.getStockQuantity();
-
-            if (cartItem.getQuantity() > stock) {
+            if (item.getQuantity() > stock) {
                 throw new AppException(ErrorCode.INSUFFICIENT_STOCK);
             }
 
-            variant.setStockQuantity(stock - cartItem.getQuantity());
+            variant.setStockQuantity(stock - item.getQuantity());
 
             OrderItem orderItem = OrderItem.builder()
                     .order(order)
@@ -89,9 +117,9 @@ public class OrderService {
                     .productImage(variant.getProduct().getThumbnail())
                     .size(variant.getSize())
                     .color(variant.getColor())
-                    .quantity(cartItem.getQuantity())
-                    .price(cartItem.getPrice())
-                    .totalPrice(cartItem.getPrice().multiply(BigDecimal.valueOf(cartItem.getQuantity())))
+                    .quantity(item.getQuantity())
+                    .price(item.getPrice())
+                    .totalPrice(item.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
                     .build();
 
             order.getOrderItems().add(orderItem);
@@ -107,7 +135,7 @@ public class OrderService {
 
         Payment payment = Payment.builder()
                 .order(order)
-                .paymentMethod(orderCreationRequest.getPaymentMethod())
+                .paymentMethod(request.getPaymentMethod())
                 .transactionCode(UUID.randomUUID().toString())
                 .amount(order.getFinalAmount())
                 .status(PaymentStatus.PENDING)
@@ -115,9 +143,10 @@ public class OrderService {
 
         paymentRepository.save(payment);
 
-        cart.getCartItems().clear();
-
-        cartRepository.save(cart);
+        if (cart != null && request.getBuyNowProductVariantId() == null) {
+            cart.getCartItems().removeAll(itemsToCheckout);
+            cartRepository.save(cart);
+        }
 
         OrderResponse response = orderMapper.toOrderResponse(order);
 
@@ -135,8 +164,8 @@ public class OrderService {
 
         OrderResponse response = orderMapper.toOrderResponse(order);
 
-        paymentRepository.findByOrderId(order.getId())
-                .ifPresent(payment -> response.setPayment(paymentMapper.toPaymentResponse(payment)));
+        paymentRepository.findByOrderId(order.getId()).ifPresent(
+                payment -> response.setPayment(paymentMapper.toPaymentResponse(payment)));
 
         return response;
     }
@@ -152,12 +181,11 @@ public class OrderService {
     public OrderResponse cancelOrder(Long orderId) {
         User user = getCurrentUser();
 
-        Order order = orderRepository.findByIdAndUserId(orderId, user.getId())
-                .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
+        Order order = orderRepository.findByIdAndUserId(orderId, user.getId()).orElseThrow(()
+                -> new AppException(ErrorCode.ORDER_NOT_FOUND));
 
-        if (order.getOrderStatus() != OrderStatus.PENDING) {
+        if (order.getOrderStatus() != OrderStatus.PENDING)
             throw new AppException(ErrorCode.ORDER_CANNOT_BE_CANCELLED);
-        }
 
         for (OrderItem orderItem : order.getOrderItems()) {
             ProductVariant variant = orderItem.getProductVariant();
@@ -176,8 +204,7 @@ public class OrderService {
 
         Payment payment = paymentRepository.findByOrderId(order.getId()).orElse(null);
 
-        if (payment != null)
-            payment.setStatus(newPaymentStatus);
+        if (payment != null) payment.setStatus(newPaymentStatus);
 
         OrderResponse response = orderMapper.toOrderResponse(order);
 
@@ -190,12 +217,15 @@ public class OrderService {
     @Transactional
     @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
     public OrderResponse confirmOrder(Long orderId) {
-        Order order = orderRepository.findById(orderId).orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
+        Order order = orderRepository.findById(orderId).orElseThrow(()
+                -> new AppException(ErrorCode.ORDER_NOT_FOUND));
 
         if (order.getOrderStatus() == OrderStatus.CANCELLED)
             throw new AppException(ErrorCode.INVALID_ORDER_STATUS);
+
         if (order.getOrderStatus() == OrderStatus.CONFIRMED)
             throw new AppException(ErrorCode.ORDER_ALREADY_IN_STATUS);
+
         if (order.getOrderStatus() != OrderStatus.PENDING)
             throw new AppException(ErrorCode.INVALID_ORDER_STATUS);
 
@@ -209,12 +239,15 @@ public class OrderService {
     @Transactional
     @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
     public OrderResponse shipOrder(Long orderId) {
-        Order order = orderRepository.findById(orderId).orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
+        Order order = orderRepository.findById(orderId).orElseThrow(()
+                -> new AppException(ErrorCode.ORDER_NOT_FOUND));
 
         if (order.getOrderStatus() == OrderStatus.CANCELLED)
             throw new AppException(ErrorCode.INVALID_ORDER_STATUS);
+
         if (order.getOrderStatus() == OrderStatus.SHIPPING)
             throw new AppException(ErrorCode.ORDER_ALREADY_IN_STATUS);
+
         if (order.getOrderStatus() != OrderStatus.CONFIRMED)
             throw new AppException(ErrorCode.INVALID_ORDER_STATUS);
 
@@ -228,22 +261,28 @@ public class OrderService {
     @Transactional
     @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
     public OrderResponse completeOrder(Long orderId) {
-        Order order = orderRepository.findById(orderId).orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
+        Order order = orderRepository.findById(orderId).orElseThrow(()
+                -> new AppException(ErrorCode.ORDER_NOT_FOUND));
 
         if (order.getOrderStatus() == OrderStatus.CANCELLED)
             throw new AppException(ErrorCode.INVALID_ORDER_STATUS);
+
         if (order.getOrderStatus() == OrderStatus.COMPLETED)
             throw new AppException(ErrorCode.ORDER_ALREADY_IN_STATUS);
+
         if (order.getOrderStatus() != OrderStatus.SHIPPING)
             throw new AppException(ErrorCode.INVALID_ORDER_STATUS);
 
         order.setOrderStatus(OrderStatus.COMPLETED);
 
-        Payment payment = paymentRepository.findByOrderId(order.getId()).orElseThrow(() -> new AppException(ErrorCode.PAYMENT_NOT_FOUND));
+        Payment payment = paymentRepository.findByOrderId(order.getId()).orElseThrow(()
+                -> new AppException(ErrorCode.PAYMENT_NOT_FOUND));
 
         if (payment.getPaymentMethod() == PaymentMethod.COD || payment.getStatus() == PaymentStatus.PENDING) {
             payment.setStatus(PaymentStatus.PAID);
+
             payment.setPaidAt(LocalDateTime.now());
+
             order.setPaymentStatus(PaymentStatus.PAID);
 
             paymentRepository.save(payment);
@@ -257,8 +296,7 @@ public class OrderService {
     @Transactional(readOnly = true)
     @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
     public List<OrderResponse> getAllOrdersForManage() {
-        return orderRepository.findAllByOrderByCreatedAtDesc().stream()
-                .map(orderMapper::toOrderResponse).toList();
+        return orderRepository.findAllByOrderByCreatedAtDesc().stream().map(orderMapper::toOrderResponse).toList();
     }
 
     @Transactional(readOnly = true)
@@ -269,17 +307,16 @@ public class OrderService {
 
         OrderResponse response = orderMapper.toOrderResponse(order);
 
-        paymentRepository.findByOrderId(order.getId()).
-                ifPresent(payment -> response.setPayment(paymentMapper.toPaymentResponse(payment)));
+        paymentRepository.findByOrderId(order.getId()).ifPresent(
+                payment -> response.setPayment(paymentMapper.toPaymentResponse(payment)));
 
         return response;
     }
 
     private User getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
         String username = authentication.getName();
-
-        return userRepository.findByUsername(username).orElseThrow(() -> new AppException(ErrorCode.UNAUTHENTICATED));
+        return userRepository.findByUsername(username).orElseThrow(()
+                -> new AppException(ErrorCode.UNAUTHENTICATED));
     }
 }

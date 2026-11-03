@@ -6,6 +6,8 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.*;
 
+import java.util.List;
+
 @Getter
 @Setter
 @NoArgsConstructor
@@ -29,4 +31,10 @@ public class OrderCreationRequest {
 
     @Size(max = 500, message = "Note must not exceed 500 characters")
     private String note;
+
+    private List<Long> cartItemIds;
+
+    private Long buyNowProductVariantId;
+
+    private Integer buyNowQuantity;
 }

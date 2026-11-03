@@ -107,7 +107,7 @@ public class ProductService {
         Product product = productRepository.findById(id).orElseThrow(()
                 -> new AppException(ErrorCode.PRODUCT_NOT_FOUND));
 
-        product.setStatus(ProductStatus.INACTIVE);
+        product.setStatus(ProductStatus.ACTIVE);
 
         return productMapper.toProductResponse(productRepository.save(product));
     }
