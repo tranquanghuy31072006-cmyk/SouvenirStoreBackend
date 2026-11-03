@@ -59,6 +59,7 @@ public class OrderService {
                     .quantity(request.getBuyNowQuantity())
                     .price(variant.getSalePrice() != null ? variant.getSalePrice() : variant.getPrice())
                     .build();
+
             itemsToCheckout.add(tempItem);
         }
         else {
@@ -67,18 +68,15 @@ public class OrderService {
 
             if (request.getCartItemIds() != null && !request.getCartItemIds().isEmpty()) {
                 for (CartItem item : cart.getCartItems()) {
-                    if (request.getCartItemIds().contains(item.getId())) {
+                    if (request.getCartItemIds().contains(item.getId()))
                         itemsToCheckout.add(item);
-                    }
                 }
-            } else {
+            } else
                 itemsToCheckout.addAll(cart.getCartItems());
-            }
         }
 
-        if (itemsToCheckout.isEmpty()) {
+        if (itemsToCheckout.isEmpty())
             throw new AppException(ErrorCode.CART_EMPTY);
-        }
 
         Order order = Order.builder()
                 .user(user)
@@ -99,14 +97,13 @@ public class OrderService {
         for (CartItem item : itemsToCheckout) {
             ProductVariant variant = item.getProductVariant();
 
-            if (variant.getStatus() != ProductVariantStatus.ACTIVE) {
+            if (variant.getStatus() != ProductVariantStatus.ACTIVE)
                 throw new AppException(ErrorCode.PRODUCT_VARIANT_INACTIVE);
-            }
 
             int stock = variant.getStockQuantity() == null ? 0 : variant.getStockQuantity();
-            if (item.getQuantity() > stock) {
+
+            if (item.getQuantity() > stock)
                 throw new AppException(ErrorCode.INSUFFICIENT_STOCK);
-            }
 
             variant.setStockQuantity(stock - item.getQuantity());
 
@@ -145,6 +142,7 @@ public class OrderService {
 
         if (cart != null && request.getBuyNowProductVariantId() == null) {
             cart.getCartItems().removeAll(itemsToCheckout);
+
             cartRepository.save(cart);
         }
 
@@ -204,7 +202,8 @@ public class OrderService {
 
         Payment payment = paymentRepository.findByOrderId(order.getId()).orElse(null);
 
-        if (payment != null) payment.setStatus(newPaymentStatus);
+        if (payment != null)
+            payment.setStatus(newPaymentStatus);
 
         OrderResponse response = orderMapper.toOrderResponse(order);
 
@@ -279,6 +278,7 @@ public class OrderService {
                 -> new AppException(ErrorCode.PAYMENT_NOT_FOUND));
 
         if (payment.getPaymentMethod() == PaymentMethod.COD || payment.getStatus() == PaymentStatus.PENDING) {
+
             payment.setStatus(PaymentStatus.PAID);
 
             payment.setPaidAt(LocalDateTime.now());
@@ -296,7 +296,9 @@ public class OrderService {
     @Transactional(readOnly = true)
     @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
     public List<OrderResponse> getAllOrdersForManage() {
-        return orderRepository.findAllByOrderByCreatedAtDesc().stream().map(orderMapper::toOrderResponse).toList();
+
+        return orderRepository.findAllByOrderByCreatedAtDesc()
+                .stream().map(orderMapper::toOrderResponse).toList();
     }
 
     @Transactional(readOnly = true)
@@ -316,7 +318,7 @@ public class OrderService {
     private User getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String username = authentication.getName();
-        return userRepository.findByUsername(username).orElseThrow(()
-                -> new AppException(ErrorCode.UNAUTHENTICATED));
+        return userRepository.findByUsername(username)
+                .orElseThrow(() -> new AppException(ErrorCode.UNAUTHENTICATED));
     }
 }
