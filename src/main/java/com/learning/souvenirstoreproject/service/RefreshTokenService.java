@@ -58,7 +58,8 @@ public class RefreshTokenService {
     public UserDetails rotateRefreshToken(String rawToken) {
         String tokenHash = hashToken(rawToken);
 
-        RefreshToken refreshToken = refreshTokenRepository.findByTokenHash(tokenHash).orElseThrow(() -> new AppException(ErrorCode.UNAUTHENTICATED));
+        RefreshToken refreshToken = refreshTokenRepository.findByTokenHash(tokenHash)
+                .orElseThrow(() -> new AppException(ErrorCode.UNAUTHENTICATED));
 
         if (refreshToken.isRevoked())
             throw new AppException(ErrorCode.UNAUTHENTICATED);
@@ -66,11 +67,16 @@ public class RefreshTokenService {
         if (refreshToken.getExpirationTime().isBefore(Instant.now()))
             throw new AppException(ErrorCode.UNAUTHENTICATED);
 
+        UserDetails userDetails = userService.loadUserByUsername(refreshToken.getUser().getUsername());
+
+        if (!userDetails.isEnabled())
+            throw new AppException(ErrorCode.USER_BLOCKED);
+
         refreshToken.setRevoked(true);
 
         refreshTokenRepository.save(refreshToken);
 
-        return userService.loadUserByUsername(refreshToken.getUser().getUsername());
+        return userDetails;
     }
 
     @Transactional

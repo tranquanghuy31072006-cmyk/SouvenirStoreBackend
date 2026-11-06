@@ -4,14 +4,17 @@ import com.learning.souvenirstoreproject.dto.request.UserPasswordUpdateRequest;
 import com.learning.souvenirstoreproject.dto.request.UserCreationRequest;
 import com.learning.souvenirstoreproject.dto.request.UserUpdateRequest;
 import com.learning.souvenirstoreproject.dto.response.UserResponse;
+import com.learning.souvenirstoreproject.entity.RefreshToken;
 import com.learning.souvenirstoreproject.entity.Role;
 import com.learning.souvenirstoreproject.entity.User;
 import com.learning.souvenirstoreproject.enums.UserStatus;
 import com.learning.souvenirstoreproject.exception.AppException;
 import com.learning.souvenirstoreproject.exception.ErrorCode;
 import com.learning.souvenirstoreproject.mapper.UserMapper;
+import com.learning.souvenirstoreproject.repository.RefreshTokenRepository;
 import com.learning.souvenirstoreproject.repository.RoleRepository;
 import com.learning.souvenirstoreproject.repository.UserRepository;
+import jakarta.transaction.Transactional;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.RequiredArgsConstructor;
@@ -37,6 +40,7 @@ public class UserService implements UserDetailsService {
     UserRepository userRepository;
     RoleRepository roleRepository;
     PasswordEncoder passwordEncoder;
+    RefreshTokenRepository  refreshTokenRepository;
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
@@ -145,14 +149,26 @@ public class UserService implements UserDetailsService {
         return userMapper.toUserResponse(userRepository.save(user));
     }
 
+    @Transactional
     @PreAuthorize("hasRole('ADMIN')")
     public UserResponse deactivateUserStatus(Long id) {
+
         User user = userRepository.findById(id).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
         if (user.getStatus() == UserStatus.BLOCKED)
             throw new AppException(ErrorCode.USER_ALREADY_BLOCKED);
 
         user.setStatus(UserStatus.BLOCKED);
 
-        return userMapper.toUserResponse(userRepository.save(user));
+        userRepository.save(user);
+
+        List<RefreshToken> refreshTokens = refreshTokenRepository.findAllByUser_Id(user.getId());
+
+        for (RefreshToken refreshToken : refreshTokens)
+            refreshToken.setRevoked(true);
+
+        refreshTokenRepository.saveAll(refreshTokens);
+
+        return userMapper.toUserResponse(user);
     }
 }

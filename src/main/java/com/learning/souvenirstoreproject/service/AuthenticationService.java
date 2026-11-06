@@ -44,6 +44,7 @@ public class AuthenticationService {
     PasswordEncoder passwordEncoder;
     CartRepository cartRepository;
 
+    @Transactional
     public void registerUser(RegisterRequest registerRequest) {
         if (userRepository.existsUserByUsername(registerRequest.getUsername()))
             throw new AppException(ErrorCode.USER_ALREADY_EXISTS);
@@ -54,9 +55,11 @@ public class AuthenticationService {
         if (userRepository.existsUserByPhone(registerRequest.getPhone()))
             throw new AppException(ErrorCode.PHONE_ALREADY_EXISTS);
 
-        Role role = roleRepository.findById("CUSTOMER").orElseThrow(() -> new AppException(ErrorCode.ROLE_NOT_FOUND));
+        Role role = roleRepository.findById("CUSTOMER")
+                .orElseThrow(() -> new AppException(ErrorCode.ROLE_NOT_FOUND));
 
         User user = userMapper.toUser(registerRequest);
+
         user.setRole(role);
         user.setPassword(passwordEncoder.encode(user.getPassword()));
 

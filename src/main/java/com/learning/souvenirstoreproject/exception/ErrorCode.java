@@ -60,6 +60,7 @@ public enum ErrorCode {
     CART_NOT_FOUND(5005, HttpStatus.NOT_FOUND, "Cart not found"),
     CART_ITEM_NOT_OWNED(5006, HttpStatus.FORBIDDEN, "Cart item does not belong to you"),
 
+
     ORDER_NOT_FOUND(6001, HttpStatus.NOT_FOUND, "Order not found"),
     INVALID_ORDER_STATUS(6002, HttpStatus.BAD_REQUEST, "Invalid order status transition"),
     ORDER_CANNOT_BE_CANCELLED(6003, HttpStatus.CONFLICT, "Order cannot be cancelled"),

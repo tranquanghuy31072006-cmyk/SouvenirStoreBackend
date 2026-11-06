@@ -23,14 +23,23 @@ public class BlacklistTokenValidator implements OAuth2TokenValidator<Jwt> {
 
         if (jti == null || jti.isBlank()) {
             log.warn("JWT missing jti");
-            OAuth2Error error = new OAuth2Error("invalid_token", "JWT is missing jti", null);
+
+            OAuth2Error error = new OAuth2Error(
+                    "invalid_token",
+                    "JWT is missing jti",
+                    null);
+
             return OAuth2TokenValidatorResult.failure(error);
         }
 
         boolean exists = invalidatedTokenRepository.existsById(jti);
 
         if (exists) {
-            OAuth2Error error = new OAuth2Error("invalid_token", "Token has been invalidated", null);
+            OAuth2Error error = new OAuth2Error(
+                    "invalid_token",
+                    "Token has been invalidated",
+                    null);
+
             return OAuth2TokenValidatorResult.failure(error);
         }
 
