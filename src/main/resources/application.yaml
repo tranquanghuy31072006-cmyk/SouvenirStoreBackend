@@ -1,6 +1,6 @@
 spring:
   application:
-    name: SouvenirStoreProject
+    name: SouvenirStoreBackend
 
   datasource:
     url: ${DBMS_CONNECTION:jdbc:mysql://localhost:3307/souvenir-store}

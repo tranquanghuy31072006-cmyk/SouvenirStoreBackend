@@ -1,0 +1,22 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:souvenir_test;DB_CLOSE_DELAY=-1;MODE=MySQL
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+
+  h2:
+    console:
+      enabled: false
+
+jwt:
+  secret: "VGhpcy1pcy1hLXRlc3Qtc2VjcmV0LWtleS1mb3Itc291dmVuaXItc3RvcmUtcHJvamVjdC1vbmx5"
+  access-token-expiration: 900
+  refresh-token-expiration: 604800
+  issuer: "souvenir-store-test"
