@@ -56,6 +56,13 @@ public class BrandService {
     }
 
     @PreAuthorize("hasAnyRole('ADMIN','STAFF')")
+    public List<BrandResponse> getAllBrands() {
+        return brandRepository.findAll().stream()
+                .map(brandMapper::toBrandResponse)
+                .collect(Collectors.toList());
+    }
+
+    @PreAuthorize("hasAnyRole('ADMIN','STAFF')")
     public BrandResponse updateBrand(Long id, BrandRequest brandRequest) {
         Brand brand = brandRepository.findById(id).orElseThrow(()
                 -> new AppException(ErrorCode.BRAND_NOT_FOUND));
@@ -90,7 +97,6 @@ public class BrandService {
 
         return brandMapper.toBrandResponse(brandRepository.save(brand));
     }
-
 
     @PreAuthorize("hasRole('ADMIN')")
     public void deleteBrand(Long id) {

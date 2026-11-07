@@ -20,8 +20,22 @@ public interface ProductMapper {
     @Mapping(target = "stockQuantity", expression = "java(calculateStockQuantity(product))")
     ProductResponse toProductResponse(Product product);
 
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "category", ignore = true)
+    @Mapping(target = "brand", ignore = true)
+    @Mapping(target = "status", ignore = true)
+    @Mapping(target = "productVariants", ignore = true)
+    @Mapping(target = "productImages", ignore = true)
+    @Mapping(target = "updatedAt", ignore = true)
     Product toProduct(ProductRequest productRequest);
 
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "category", ignore = true)
+    @Mapping(target = "brand", ignore = true)
+    @Mapping(target = "status", ignore = true)
+    @Mapping(target = "productVariants", ignore = true)
+    @Mapping(target = "productImages", ignore = true)
+    @Mapping(target = "updatedAt", ignore = true)
     void updateProduct(@MappingTarget Product product, ProductRequest productRequest);
 
     List<ProductResponse> toProductResponseList(List<Product> productList);
@@ -30,6 +44,7 @@ public interface ProductMapper {
         if (product.getProductVariants() == null || product.getProductVariants().isEmpty()) {
             return 0;
         }
+
         return product.getProductVariants().stream()
                 .mapToInt(v -> v.getStockQuantity() == null ? 0 : v.getStockQuantity())
                 .sum();

@@ -37,6 +37,13 @@ public class CategoryController {
                 .build();
     }
 
+    @GetMapping
+    public ApiResponse<List<CategoryResponse>> getAllCategories() {
+        return ApiResponse.<List<CategoryResponse>>builder()
+                .result(categoryService.getAllCategories())
+                .build();
+    }
+
     @GetMapping("/active")
     public ApiResponse<List<CategoryResponse>> getActiveCategories() {
 

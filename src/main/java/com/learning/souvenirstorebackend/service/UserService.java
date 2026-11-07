@@ -93,7 +93,7 @@ public class UserService implements UserDetailsService {
 
     @PreAuthorize("hasAnyRole('ADMIN')")
     public UserResponse updateUser(Long id, UserUpdateRequest userUpdateRequest) {
-        User user = userRepository.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
+        User user = userRepository.findById(id).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
         userMapper.updateUser(user, userUpdateRequest);
 

@@ -21,6 +21,7 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 public class CategoryServiceTest {
+
     @Mock
     private CategoryRepository categoryRepository;
 
@@ -31,7 +32,7 @@ public class CategoryServiceTest {
     private CategoryMapper categoryMapper;
 
     @InjectMocks
-    CategoryService categoryService;
+    private CategoryService categoryService;
 
     private Category category;
 
@@ -47,21 +48,19 @@ public class CategoryServiceTest {
     @Test
     void deleteCategory_whenHasProducts_throwException() {
         when(categoryRepository.findById(1L)).thenReturn(Optional.of(category));
+        when(productRepository.existsByCategoryId(1L)).thenReturn(true);
 
-        when(productRepository.existsById(1L)).thenReturn(true);
-
-        assertThatThrownBy(()->categoryService.deleteCategory(1L))
+        assertThatThrownBy(() -> categoryService.deleteCategory(1L))
                 .isInstanceOf(AppException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.CATEGORY_HAS_PRODUCTS);
 
-        verify(productRepository, never()).delete(any());
+        verify(categoryRepository, never()).delete(any(Category.class));
     }
 
     @Test
     void deleteCategory_whenNoProducts_deleteSuccessful() {
         when(categoryRepository.findById(1L)).thenReturn(Optional.of(category));
-
-        when(productRepository.existsById(1L)).thenReturn(false);
+        when(productRepository.existsByCategoryId(1L)).thenReturn(false);
 
         categoryService.deleteCategory(1L);
 

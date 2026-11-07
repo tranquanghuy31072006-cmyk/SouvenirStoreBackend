@@ -11,6 +11,7 @@ import org.mapstruct.MappingTarget;
 
 @Mapper(componentModel = "spring")
 public interface UserMapper {
+
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "avatar", ignore = true)
     @Mapping(target = "role", ignore = true)
@@ -18,9 +19,25 @@ public interface UserMapper {
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
     User toUser(UserCreationRequest request);
+
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "avatar", ignore = true)
+    @Mapping(target = "role", ignore = true)
+    @Mapping(target = "status", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "updatedAt", ignore = true)
     User toUser(RegisterRequest registerRequest);
 
     UserResponse toUserResponse(User user);
 
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "username", ignore = true)
+    @Mapping(target = "password", ignore = true)
+    @Mapping(target = "role", ignore = true)
+    @Mapping(target = "status", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "updatedAt", ignore = true)
+    @Mapping(target = "email", ignore = true)
+    @Mapping(target = "avatar", ignore = true)
     void updateUser(@MappingTarget User user, UserUpdateRequest userUpdateRequest);
 }

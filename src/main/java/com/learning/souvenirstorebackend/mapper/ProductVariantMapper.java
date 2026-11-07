@@ -20,13 +20,24 @@ public interface ProductVariantMapper {
     ProductVariantResponse toProductVariantResponse(ProductVariant productVariant);
 
     @Mapping(target = "product", ignore = true)
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "updatedAt", ignore = true)
     @Mapping(target = "status", constant = "ACTIVE")
     ProductVariant toProductVariant(ProductVariantCreationRequest request);
 
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "product", ignore = true)
     @Mapping(target = "sku", ignore = true)
-    void updateProductVariant(@MappingTarget ProductVariant productVariant, ProductVariantUpdateRequest request);
+    @Mapping(target = "status", ignore = true)
+    @Mapping(target = "updatedAt", ignore = true)
+    void updateProductVariant(
+            @MappingTarget ProductVariant productVariant,
+            ProductVariantUpdateRequest request
+    );
 
     default BigDecimal calcEffectivePrice(ProductVariant productVariant) {
-        return productVariant.getSalePrice() != null ? productVariant.getSalePrice() : productVariant.getPrice();
+        return productVariant.getSalePrice() != null
+                ? productVariant.getSalePrice()
+                : productVariant.getPrice();
     }
 }

@@ -1,6 +1,7 @@
 package com.learning.souvenirstorebackend.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.learning.souvenirstorebackend.enums.CategoryStatus;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
@@ -18,4 +19,6 @@ public class CategoryResponse {
     String name;
 
     String description;
+
+    CategoryStatus status;
 }

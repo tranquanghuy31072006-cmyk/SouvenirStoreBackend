@@ -27,6 +27,14 @@ public class BrandController {
                 .build();
     }
 
+    // Lấy toàn bộ thương hiệu (ADMIN/STAFF)
+    @GetMapping
+    ApiResponse<List<BrandResponse>> getAllBrands() {
+        return ApiResponse.<List<BrandResponse>>builder()
+                .result(brandService.getAllBrands())
+                .build();
+    }
+
     @GetMapping("/{brandId}")
     ApiResponse<BrandResponse> getBrandById(@PathVariable Long brandId) {
 

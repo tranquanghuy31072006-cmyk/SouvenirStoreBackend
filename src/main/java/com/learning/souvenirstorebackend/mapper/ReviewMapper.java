@@ -13,5 +13,9 @@ public interface ReviewMapper {
     @Mapping(target = "userFullName", source = "user.fullName")
     ReviewResponse toReviewResponse(Review review);
 
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "user", ignore = true)
+    @Mapping(target = "product", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
     void updateReview(@MappingTarget Review review, ReviewUpdateRequest request);
 }

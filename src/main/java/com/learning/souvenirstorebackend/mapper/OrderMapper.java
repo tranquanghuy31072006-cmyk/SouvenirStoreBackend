@@ -11,6 +11,7 @@ import org.mapstruct.Mapping;
 public interface OrderMapper {
 
     @Mapping(target = "items", source = "orderItems")
+    @Mapping(target = "payment", ignore = true)
     OrderResponse toOrderResponse(Order order);
 
     @Mapping(target = "orderId", source = "order.id")
