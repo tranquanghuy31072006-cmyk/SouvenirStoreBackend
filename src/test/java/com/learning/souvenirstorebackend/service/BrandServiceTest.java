@@ -14,6 +14,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.util.Optional;
 
@@ -107,5 +108,100 @@ public class BrandServiceTest {
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.BRAND_ALREADY_ACTIVE);
 
         verify(brandRepository,never()).save(any());
+    }
+
+    @Test
+    void createBrand_whenSaveThrowsDataIntegrityViolation_throwBrandAlreadyExists(){
+        when(brandRepository.existsByName(anyString())).thenReturn(false);
+
+        when(brandMapper.toBrand(request)).thenReturn(brand);
+
+        when(brandRepository.save(any(Brand.class)))
+                .thenThrow(new DataIntegrityViolationException("unique constraint"));
+
+        assertThatThrownBy(() -> brandService.createBrand(request))
+                .isInstanceOf(AppException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.BRAND_ALREADY_EXISTS);
+
+        verify(brandRepository, times(1)).save(any());
+    }
+
+    @Test
+    void getActiveBrands_whenHaveActiveBrands_thenReturnMappedList(){}
+
+    @Test
+    void updateBrand_whenExists_thenCallsMapperUpdateAndSave(){
+        when(brandRepository.findById(1L)).thenReturn(Optional.of(brand));
+        when(brandRepository.save(brand)).thenReturn(brand);
+        when(brandMapper.toBrandResponse(brand)).thenReturn(response);
+
+        var result = brandService.updateBrand(1L, request);
+
+        assertThat(result.getName()).isEqualTo("TestBrand");
+
+        verify(brandMapper).updateBrand(brand, request);
+        verify(brandRepository).save(brand);
+    }
+
+    @Test
+    void updateBrand_whenNotFound_throwsBrandNotFound() {
+        when(brandRepository.findById(1L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> brandService.updateBrand(1L, request))
+                .isInstanceOf(AppException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.BRAND_NOT_FOUND);
+
+        verify(brandRepository, never()).save(any());
+    }
+
+    @Test
+    void deactivateBrand_whenActive_setsInactiveAndSaves(){
+        when(brandRepository.findById(1L)).thenReturn(Optional.of(brand));
+
+        brandService.deactivateBrand(1L);
+
+        assertThat(brand.getStatus()).isEqualTo(BrandStatus.INACTIVE);
+
+        verify(brandRepository, times(1)).save(brand);
+    }
+
+    @Test
+    void deactivateBrand_whenAlreadyInactive_throwsBrandAlreadyInactive(){
+        brand.setStatus(BrandStatus.INACTIVE);
+
+        when(brandRepository.findById(1L)).thenReturn(Optional.of(brand));
+
+        assertThatThrownBy(() -> brandService.deactivateBrand(1L))
+                .isInstanceOf(AppException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.BRAND_ALREADY_INACTIVE);
+
+        verify(brandRepository,never()).save(any());
+    }
+
+    @Test
+    void deactivateBrand_whenNotFound_throwsBrandNotFound(){
+        when(brandRepository.findById(1L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> brandService.deactivateBrand(1L)).isInstanceOf(AppException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.BRAND_NOT_FOUND);
+    }
+
+    @Test
+    void deleteBrand_whenExists_callsDelete() {
+        when(brandRepository.findById(1L)).thenReturn(Optional.of(brand));
+
+        brandService.deleteBrand(1L);
+
+        verify(brandRepository, times(1)).delete(brand);
+    }
+
+    @Test
+    void deleteBrand_whenNotFound_throwsBrandNotFound(){
+        when(brandRepository.findById(1L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> brandService.deleteBrand(1L)).isInstanceOf(AppException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.BRAND_NOT_FOUND);
+
+        verify(brandRepository,never()).delete(any());
     }
 }

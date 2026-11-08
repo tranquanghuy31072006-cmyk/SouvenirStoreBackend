@@ -1,5 +1,7 @@
 package com.learning.souvenirstorebackend.service;
 
+import com.learning.souvenirstorebackend.dto.request.CategoryRequest;
+import com.learning.souvenirstorebackend.dto.response.CategoryResponse;
 import com.learning.souvenirstorebackend.entity.Category;
 import com.learning.souvenirstorebackend.enums.CategoryStatus;
 import com.learning.souvenirstorebackend.exception.AppException;
@@ -13,9 +15,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.util.Optional;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.*;
 
@@ -36,13 +40,66 @@ public class CategoryServiceTest {
 
     private Category category;
 
+    private CategoryRequest categoryRequest;
+
+    private CategoryResponse categoryResponse;
+
     @BeforeEach
     public void setUp() {
-        category = Category.builder()
-                .id(1L)
-                .name("TestCategory")
-                .status(CategoryStatus.ACTIVE)
-                .build();
+        category = Category.builder().id(1L).name("TestCategory").status(CategoryStatus.ACTIVE).build();
+
+        categoryRequest = CategoryRequest.builder().name("TestCategory").build();
+
+        categoryResponse = CategoryResponse.builder().id(1L).name("TestCategory").build();
+    }
+
+    @Test
+    void createCategory_whenNameNotExists_savesAndReturnsResponse() {
+        when(categoryRepository.existsByName(anyString())).thenReturn(false);
+
+        categoryService.createCategory(categoryRequest);
+
+        assertThat(category.getName()).isEqualTo(categoryRequest.getName());
+
+        verify(categoryRepository, times(1)).save(any());
+    }
+
+    @Test
+    void createCategory_whenNameExists_throwsCategoryAlreadyExists() {
+        when(categoryRepository.existsByName(anyString())).thenReturn(true);
+
+        assertThatThrownBy(() -> categoryService.createCategory(categoryRequest))
+                .isInstanceOf(AppException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.CATEGORY_ALREADY_EXISTS);
+
+        verify(categoryRepository, never()).save(any());
+    }
+
+    @Test
+    void createCategory_whenSaveThrowsDataIntegrityViolation_throwsCategoryAlreadyExists() {
+        when(categoryRepository.existsByName(anyString())).thenReturn(false);
+
+        when(categoryMapper.toCategory(categoryRequest)).thenReturn(category);
+
+        when(categoryRepository.save(any(Category.class)))
+                .thenThrow(new DataIntegrityViolationException("unique constraint"));
+
+        assertThatThrownBy(() -> categoryService.createCategory(categoryRequest))
+                .isInstanceOf(AppException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.CATEGORY_ALREADY_EXISTS);
+
+        verify(categoryRepository, times(1)).save(any());
+    }
+
+    @Test
+    void getCategoryById_whenExists_returnsResponse() {
+        when(categoryRepository.findById(1L)).thenReturn(Optional.of(category));
+
+        when(categoryMapper.toCategoryResponse(category)).thenReturn(categoryResponse);
+
+        var result = categoryService.getCategoryById(1L);
+
+        assertThat(result.getId()).isEqualTo(1L);
     }
 
     @Test
