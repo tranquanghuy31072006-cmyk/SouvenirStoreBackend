@@ -17,6 +17,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -103,8 +104,101 @@ public class CategoryServiceTest {
     }
 
     @Test
+    void getCategoryById_whenNotFound_throwsCategoryNotFound() {
+        when(categoryRepository.findById(1L)).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> categoryService.getCategoryById(1L))
+                .isInstanceOf(AppException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.CATEGORY_NOT_FOUND);
+    }
+
+    @Test
+    void getAllActiveCategories_returnsOnlyActiveCategories() {
+        when(categoryRepository.findAllByStatus(CategoryStatus.ACTIVE)).thenReturn(List.of(category));
+
+        when(categoryMapper.toCategoryResponse(category)).thenReturn(categoryResponse);
+
+        categoryService.getAllActiveCategory();
+
+        verify(categoryRepository).findAllByStatus(CategoryStatus.ACTIVE);
+    }
+
+    @Test
+    void getAllActiveCategories_whenEmpty_throwsEmptyList() {
+        when(categoryRepository.findAllByStatus(CategoryStatus.ACTIVE)).thenReturn(List.of());
+        categoryService.getAllActiveCategory();
+        assertThat(categoryService.getAllActiveCategory()).isEmpty();
+    }
+
+    @Test
+    void updateCategory_whenExists_callsMapperUpdateAndSaves() {
+        when(categoryRepository.findById(1L)).thenReturn(Optional.of(category));
+
+        when(categoryRepository.save(any(Category.class))).thenReturn(category);
+
+        when(categoryMapper.toCategoryResponse(category)).thenReturn(categoryResponse);
+
+        var result = categoryService.updateCategory(1L, categoryRequest);
+
+        assertThat(result).isEqualTo(categoryResponse);
+
+        verify(categoryMapper).updateCategory(category, categoryRequest);
+
+        verify(categoryRepository).save(category);
+    }
+
+    @Test
+    void updateCategory_whenNotFound_throwsCategoryNotFound() {
+        when(categoryRepository.findById(1L)).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> categoryService.updateCategory(1L, categoryRequest))
+                .isInstanceOf(AppException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.CATEGORY_NOT_FOUND);
+    }
+
+    @Test
+    void activateCategory_whenInactive_setActiveAndSaves() {
+        when(categoryRepository.findById(1L)).thenReturn(Optional.of(category));
+
+        when(categoryRepository.save(any(Category.class))).thenReturn(category);
+
+        when(categoryMapper.toCategoryResponse(category)).thenReturn(categoryResponse);
+
+        category.setStatus(CategoryStatus.INACTIVE);
+
+        var result = categoryService.activateCategory(1L);
+
+        assertThat(result).isEqualTo(categoryResponse);
+
+        assertThat(category.getStatus()).isEqualTo(CategoryStatus.ACTIVE);
+
+        verify(categoryRepository).findById(1L);
+
+        verify(categoryRepository).save(category);
+    }
+
+    @Test
+    void activateCategory_whenAlreadyActive_throwsCategoryAlreadyActive() {
+        when(categoryRepository.findById(1L)).thenReturn(Optional.of(category));
+
+        assertThatThrownBy(() -> categoryService.activateCategory(1L)).isInstanceOf(AppException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.CATEGORY_ALREADY_ACTIVE);
+
+        verify(productRepository, never()).save(any());
+    }
+
+    @Test
+    void activateCategory_whenNotFound_throwsCategoryNotFound() {
+        when(categoryRepository.findById(1L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> categoryService.activateCategory(1L)).isInstanceOf(AppException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.CATEGORY_NOT_FOUND);
+
+        verify(productRepository, never()).save(any());
+    }
+
+    @Test
     void deleteCategory_whenHasProducts_throwException() {
         when(categoryRepository.findById(1L)).thenReturn(Optional.of(category));
+
         when(productRepository.existsByCategoryId(1L)).thenReturn(true);
 
         assertThatThrownBy(() -> categoryService.deleteCategory(1L))
@@ -115,12 +209,70 @@ public class CategoryServiceTest {
     }
 
     @Test
+    void deactivateCategory_whenActive_setsInactiveAndSaves() {
+        category.setStatus(CategoryStatus.ACTIVE);
+
+        when(categoryRepository.findById(1L)).thenReturn(Optional.of(category));
+
+        when(categoryRepository.save(any(Category.class))).thenReturn(category);
+
+        when(categoryMapper.toCategoryResponse(category)).thenReturn(categoryResponse);
+
+        var result = categoryService.deactivateCategory(1L);
+
+        assertThat(result).isEqualTo(categoryResponse);
+
+        assertThat(category.getStatus()).isEqualTo(CategoryStatus.INACTIVE);
+
+        verify(categoryRepository).findById(1L);
+
+        verify(categoryRepository).save(category);
+    }
+
+    @Test
+    void deactivateCategory_whenAlreadyInactive_throwsCategoryAlreadyInactive() {
+        category.setStatus(CategoryStatus.INACTIVE);
+
+        when(categoryRepository.findById(1L)).thenReturn(Optional.of(category));
+
+        assertThatThrownBy(() -> categoryService.deactivateCategory(1L))
+                .isInstanceOf(AppException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.CATEGORY_ALREADY_INACTIVE);
+
+        verify(categoryRepository).findById(1L);
+
+        verify(categoryRepository, never()).save(any());
+    }
+
+    @Test
+    void deactivateCategory_whenNotFound_throwsCategoryNotFound() {
+        when(categoryRepository.findById(999L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> categoryService.deactivateCategory(999L))
+                .isInstanceOf(AppException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.CATEGORY_NOT_FOUND);
+
+        verify(categoryRepository, never()).save(any());
+    }
+
+    @Test
     void deleteCategory_whenNoProducts_deleteSuccessful() {
         when(categoryRepository.findById(1L)).thenReturn(Optional.of(category));
+
         when(productRepository.existsByCategoryId(1L)).thenReturn(false);
 
         categoryService.deleteCategory(1L);
 
         verify(categoryRepository, times(1)).delete(category);
+    }
+
+    @Test
+    void deleteCategory_whenNotFound_throwsCategoryNotFound() {
+        when(categoryRepository.findById(1L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> categoryService.deleteCategory(1L))
+                .isInstanceOf(AppException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.CATEGORY_NOT_FOUND);
+        verify(categoryRepository, never()).delete(any());
     }
 }
