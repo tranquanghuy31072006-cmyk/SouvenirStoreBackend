@@ -125,8 +125,10 @@ public class CategoryServiceTest {
     @Test
     void getAllActiveCategories_whenEmpty_throwsEmptyList() {
         when(categoryRepository.findAllByStatus(CategoryStatus.ACTIVE)).thenReturn(List.of());
-        categoryService.getAllActiveCategory();
-        assertThat(categoryService.getAllActiveCategory()).isEmpty();
+
+        var result = categoryService.getAllActiveCategory();
+
+        assertThat(result).isEmpty();
     }
 
     @Test
@@ -182,7 +184,7 @@ public class CategoryServiceTest {
         assertThatThrownBy(() -> categoryService.activateCategory(1L)).isInstanceOf(AppException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.CATEGORY_ALREADY_ACTIVE);
 
-        verify(productRepository, never()).save(any());
+        verify(categoryRepository, never()).save(any());
     }
 
     @Test

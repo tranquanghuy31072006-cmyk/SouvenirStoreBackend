@@ -16,10 +16,11 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
 
+import java.util.List;
 import java.util.Optional;
 
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
@@ -127,7 +128,34 @@ public class BrandServiceTest {
     }
 
     @Test
-    void getActiveBrands_whenHaveActiveBrands_thenReturnMappedList(){}
+    void getActiveBrands_whenHaveActiveBrands_thenReturnMappedList() {
+        when(brandRepository.getBrandByStatus(BrandStatus.ACTIVE)).thenReturn(List.of(brand));
+
+        when(brandMapper.toBrandResponse(brand)).thenReturn(response);
+
+        List<BrandResponse> result = brandService.getActiveBrands();
+
+        assertThat(result).hasSize(1);
+
+        assertThat(result.getFirst().getName()).isEqualTo("TestBrand");
+
+        verify(brandRepository).getBrandByStatus(BrandStatus.ACTIVE);
+
+        verify(brandMapper).toBrandResponse(brand);
+    }
+
+    @Test
+    void getActiveBrands_whenEmpty_returnsEmptyList() {
+        when(brandRepository.getBrandByStatus(BrandStatus.ACTIVE)).thenReturn(List.of());
+
+        List<BrandResponse> result = brandService.getActiveBrands();
+
+        assertThat(result).isEmpty();
+
+        verify(brandRepository).getBrandByStatus(BrandStatus.ACTIVE);
+
+        verify(brandMapper, never()).toBrandResponse(any());
+    }
 
     @Test
     void updateBrand_whenExists_thenCallsMapperUpdateAndSave(){
